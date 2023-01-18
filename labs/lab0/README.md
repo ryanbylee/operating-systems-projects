@@ -1,22 +1,35 @@
 # A Kernel Seedling
 
-One sentence description
+Kernel Module to print the number of currnetly-running processes
 
 ## Building
 
 Explain how to build your kernel module
+To build the kernel module, run
+`make`
+inside the directory
 
 ## Running
 
-Explain how to run your kernel module and what to expect
+To load the kernel module into kernel, run
+`sudo insmod proc_count.ko`
+
+To check if the module is loaded successfully, run
+`lsmod`
+
+To run the kernel module, run
+`cat /proc/count`
+
+You should expect to see the number of currently-running process in your system.
 
 ## Cleaning Up
 
-Explain how to remove your kernel module and clean up the code
+To remove the kernel module from kernel, run
+`sudo rmmod proc_count`
 
 ## Testing
 
-Report which kernel release version you tested your module on
-(hint: use `uname`, check for options with `man uname`).
-It should match release numbers as seen on https://www.kernel.org/.
+The module is tested on kernel release version
+5.14.8-arch1-1
+
 
