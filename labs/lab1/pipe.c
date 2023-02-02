@@ -24,12 +24,12 @@ int main(int argc, char *argv[])
 
 	if (argc == 2){
 		if (execlp(argv[1], argv[1], NULL) == -1){
-				return -1;
+				return errno;
 		}
 	}
 	pid_t forked_pid;
-	pid_t* pids = (pid_t*) malloc(argc * sizeof(pid_t));
-	int pidcounter = 0;
+	//pid_t* pids = (pid_t*) malloc(argc * sizeof(pid_t));
+	int pids[argc - 1];
 	int fd[2];
 	int previous_readEnd = STDIN_FILENO;
 	for (int i = 1; i < argc - 1; i++){
@@ -39,20 +39,35 @@ int main(int argc, char *argv[])
 		//printf("prev. readEnd: %d\n", previous_readEnd);
 		forked_pid = fork();
 		if (forked_pid > 0){
-			pids[i - 1] = forked_pid; 
+			pids[i - 1] = forked_pid;
+			int status;
+			if (waitpid(forked_pid, &status, 0) == -1){
+				return errno;
+			}
+			if (!WIFEXITED(status))
+    			return ECHILD;
+			else if (WEXITSTATUS(status)){
+				return WEXITSTATUS(status);
+			}
+			
+			if (previous_readEnd != STDIN_FILENO){
+				close(previous_readEnd); 
+			}
 			previous_readEnd = fd[0];
 			//printf("prev. readEnd after fork(parent): %d\n", previous_readEnd);
 			close(fd[1]);
+
 		}
 
 		if (forked_pid == 0){
 			//printf("prev. readEnd after fork(child): %d\n", previous_readEnd);
 			dup2(previous_readEnd, STDIN_FILENO);
 			dup2(fd[1], STDOUT_FILENO);
+			close(previous_readEnd);
 			close(fd[1]);
 			close(fd[0]);
 			if (execlp(argv[i], argv[i], NULL) == -1){
-				return -1;
+				return errno;
 			}
 		}
 	}
@@ -65,22 +80,34 @@ int main(int argc, char *argv[])
 		//printf("prev. readEnd after fork(parent): %d\n", previous_readEnd);
 		close(fd[1]);
 		int status;
-		for (int i = 0; i < pidcounter; i++){
-			waitpid(pids[i], &status,0);
-			if (WEXITSTATUS(status) != 0){
-				printf("%d\n", WEXITSTATUS(status));
-			}
+		if (waitpid(forked_pid, &status, 0) == -1){
+				return errno;
 		}
+		if (!WIFEXITED(status))
+			return ECHILD;
+		else if (WEXITSTATUS(status)){
+			return WEXITSTATUS(status);
+		}
+		
 	}
-
 	if (forked_pid == 0){
 		//printf("prev. readEnd after fork(child): %d\n", previous_readEnd);
 		dup2(fd[0], STDIN_FILENO);
 		close(fd[0]);
 		if (execlp(argv[argc - 1], argv[argc - 1], NULL) == -1){
-				return -1;
+				return errno;
 		}
 	}
+	//free(pids);
+	/*
+	for (int i = 0; i < pidcounter; i++){
+			int status;
+			waitpid(pids[i], &status,0);
+			if (WIFEXITED(status) != 0){
+				return WEXITSTATUS(status);
+			}
+	}
+	*/
 }	
 
 /*
