@@ -1,18 +1,27 @@
-## UID: 123456789
-(IMPORTANT: Only replace the above numbers with your true UID, do not modify spacing and newlines, otherwise your tarfile might not be created correctly)
+## UID: 905753127
 
 ## Pipe Up
 
-One sentence description
+C program that implements the functionalities of a shell operator pipe (`|`)
 
 ## Building
 
-Explain briefly how to build your program
+On unix/linux command-line interface, type 
+`make`
+to create the executable
 
 ## Running
+
+Run the executable with at least one argument
+
+e.g. `./pipe ls cat` would print to console what `$ ls | cat` would print
+
+e.g. `./pipe ls cat wc` would print to console what `$ ls | cat | wc` would print
 
 Show an example run of your program, using at least two additional arguments, and what to expect
 
 ## Cleaning up
 
-Explain briefly how to clean up all binary files
+To clean up all binary files, type
+
+`make clean`
