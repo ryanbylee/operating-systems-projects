@@ -22,6 +22,8 @@ struct process
 
   /* Additional fields here */
   u32 remaining_time;
+  u32 response_time;
+  bool processed;
   /* End of "Additional fields here" */
 };
 
@@ -161,7 +163,21 @@ int main(int argc, char *argv[])
   u32 total_response_time = 0;
 
   /* Your code here */
-
+  /*
+  struct process *current_process = &data[0];
+  TAILQ_INSERT_TAIL(&list, current_process, pointers);
+  struct process *p;
+  TAILQ_FOREACH(p, &list, pointers){
+    printf("process %d is in the queue\n", p->pid);
+  }
+  TAILQ_REMOVE(&list, current_process, pointers);
+  TAILQ_FOREACH(p, &list, pointers){
+    printf("process %d is in the queue\n", p->pid);
+  }
+  if (TAILQ_EMPTY(&list)){
+    printf("empty");
+  }
+  */
   struct process* current_process;
   for (u32 i = 0; i < size; i++){
     current_process = &data[i];
@@ -177,30 +193,100 @@ int main(int argc, char *argv[])
       current_process = &data[i];
       if (current_process->arrival_time == current_time){
         TAILQ_INSERT_TAIL(&list, current_process, pointers);
-        
+        current_process->response_time = 0;
+        current_process->processed = false;
         struct process *p;
         TAILQ_FOREACH(p, &list, pointers){
-          printf("at time %d, process %d is in the queue\n", current_time, p->pid);
+          //printf("at time %d, process %d is in the queue\n", current_time, p->pid);
         }
         
       }
     }
     struct process *firstProcessOnQueue = TAILQ_FIRST(&list);
-    if (remaining_quantum == 0){
-      printf("at time %d, process %d preempted\n", current_time, firstProcessOnQueue->pid);
+    if (!firstProcessOnQueue->processed){
+      firstProcessOnQueue->processed = true;
+      total_response_time += firstProcessOnQueue->response_time;
+    }
+    if (firstProcessOnQueue->remaining_time == 0 && remaining_quantum == 0){
+      //printf("at time %d, process %d ended\n", current_time, firstProcessOnQueue->pid);
+      
+      TAILQ_REMOVE(&list, firstProcessOnQueue, pointers);
+      if (!TAILQ_EMPTY(&list)){
+        firstProcessOnQueue = TAILQ_FIRST(&list);
+        if (!firstProcessOnQueue->processed){
+          firstProcessOnQueue->processed = true;
+          total_response_time += firstProcessOnQueue->response_time;
+        }
+        remaining_quantum = quantum_length;
+        firstProcessOnQueue->remaining_time--;
+        remaining_quantum--;
+        struct process *p;
+        TAILQ_FOREACH(p, &list, pointers){
+          total_waiting_time++;
+        } 
+        total_waiting_time--;
+        //printf("process %d's remaining time: %d\n", firstProcessOnQueue->pid, firstProcessOnQueue->remaining_time);
+        //printf("process %d's remaining quantum time: %d\n", firstProcessOnQueue->pid, remaining_quantum);
+
+      }
+        
+    }else if (remaining_quantum != 0 && firstProcessOnQueue->remaining_time != 0){
+      
+      firstProcessOnQueue->remaining_time--;
+      remaining_quantum--;
+      struct process *p;
+      TAILQ_FOREACH(p, &list, pointers){
+        total_waiting_time++;
+      }
+      total_waiting_time--;
+      //printf("process %d's remaining time: %d\n", firstProcessOnQueue->pid, firstProcessOnQueue->remaining_time);
+      //printf("process %d's remaining quantum time: %d\n", firstProcessOnQueue->pid, remaining_quantum);
+      
+
+    }else if (remaining_quantum == 0){
+      //printf("at time %d, process %d preempted\n", current_time, firstProcessOnQueue->pid);
       TAILQ_REMOVE(&list, firstProcessOnQueue, pointers);
       TAILQ_INSERT_TAIL(&list, firstProcessOnQueue, pointers);
-      struct process *current_element;
-      struct process *next_element;
-    
-      /*for (current_element = TAILQ_FIRST(&list); current_element != NULL; current_element = next_element){
-        next_element = TAILQ_NEXT(current_element, pointers);
-        printf("at time %d, process %d is in the queue\n", current_time, current_element->pid);
-      }*/
+      firstProcessOnQueue = TAILQ_FIRST(&list);
+      if (!firstProcessOnQueue->processed){
+        firstProcessOnQueue->processed = true;
+        total_response_time += firstProcessOnQueue->response_time;
+      }
       remaining_quantum = quantum_length;
-    }if (firstProcessOnQueue->remaining_time == 0){
-      printf("at time %d, process %d ended\n", current_time, firstProcessOnQueue->pid);
+      firstProcessOnQueue->remaining_time--;
+      remaining_quantum--;
+      struct process *p;
+      TAILQ_FOREACH(p, &list, pointers){
+        total_waiting_time++;
+      }
+      total_waiting_time--;
+      //printf("process %d's remaining time: %d\n", firstProcessOnQueue->pid, firstProcessOnQueue->remaining_time);
+      //printf("process %d's remaining quantum time: %d\n", firstProcessOnQueue->pid, remaining_quantum);
+    }
+    
+    else if (firstProcessOnQueue->remaining_time == 0){
+      //printf("at time %d, process %d ended\n", current_time, firstProcessOnQueue->pid);
+      
       TAILQ_REMOVE(&list, firstProcessOnQueue, pointers);
+      if (!TAILQ_EMPTY(&list)){
+        firstProcessOnQueue = TAILQ_FIRST(&list);
+        if (!firstProcessOnQueue->processed){
+          firstProcessOnQueue->processed = true;
+          total_response_time += firstProcessOnQueue->response_time;
+        }
+        remaining_quantum = quantum_length;
+        firstProcessOnQueue->remaining_time--;
+        remaining_quantum--;
+        struct process *p;
+        TAILQ_FOREACH(p, &list, pointers){
+          total_waiting_time++;
+        } 
+        total_waiting_time--;
+        //printf("process %d's remaining time: %d\n", firstProcessOnQueue->pid, firstProcessOnQueue->remaining_time);
+        //printf("process %d's remaining quantum time: %d\n", firstProcessOnQueue->pid, remaining_quantum);
+
+      }
+        
     }
     
     /*
@@ -212,13 +298,8 @@ int main(int argc, char *argv[])
     
     
     //printf("at time %d, process %d is at the head\n", current_time, firstProcessOnQueue->pid);
-    if (remaining_quantum != 0 && firstProcessOnQueue->remaining_time != 0){
-      printf("process %d's remaining time: %d\n", firstProcessOnQueue->pid, firstProcessOnQueue->remaining_time);
-      firstProcessOnQueue->remaining_time--;
-      remaining_quantum--;
-      printf("process %d's remaining quantum time: %d\n", firstProcessOnQueue->pid, remaining_quantum);
-
-    }
+    
+    
     
     
     /*struct process *current_element;
@@ -236,28 +317,21 @@ int main(int argc, char *argv[])
     TAILQ_FOREACH(p, &list, pointers){
       total_waiting_time++;
     }
+    total_waiting_time--;*/
 
-    if (remaining_quantum != 0 && firstProcessOnQueue->remaining_time != 0){
-      firstProcessOnQueue->remaining_time--;
-      remaining_quantum--;
-    }else if (remaining_quantum == 0){
-      TAILQ_INSERT_TAIL(&list, firstProcessOnQueue, pointers);
-      remaining_quantum = quantum_length;
-    }
-
-
-    */
-
-    
+    struct process *p;
+    TAILQ_FOREACH(p, &list, pointers){
+      if (!p->processed){
+        p->response_time++;
+      }
+    } 
 
     if (TAILQ_EMPTY(&list)){
       if_finished = true;
-      printf("queue empty\n");
+      //printf("queue empty\n");
     }
     current_time++;
   }
-
-
  
 
 
