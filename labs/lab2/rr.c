@@ -202,6 +202,10 @@ int main(int argc, char *argv[])
         
       }
     }
+    if (TAILQ_EMPTY(&list)){
+      current_time++;
+      continue;
+    }
     struct process *firstProcessOnQueue = TAILQ_FIRST(&list);
     if (!firstProcessOnQueue->processed){
       firstProcessOnQueue->processed = true;
