@@ -5,6 +5,8 @@
 #include <string.h>
 #include <sys/queue.h>
 
+static pthread_mutex_t v1_mutex;
+
 struct list_entry {
 	const char *key;
 	uint32_t value;
@@ -29,6 +31,7 @@ struct hash_table_v1 *hash_table_v1_create()
 		struct hash_table_entry *entry = &hash_table->entries[i];
 		SLIST_INIT(&entry->list_head);
 	}
+	pthread_mutex_init(&v1_mutex, NULL);
 	return hash_table;
 }
 
@@ -71,8 +74,7 @@ void hash_table_v1_add_entry(struct hash_table_v1 *hash_table,
                              const char *key,
                              uint32_t value)
 {
-	static pthread_mutex_t v1_mutex;
-	pthread_mutex_init(&v1_mutex, NULL);
+
 	pthread_mutex_lock(&v1_mutex);
 	struct hash_table_entry *hash_table_entry = get_hash_table_entry(hash_table, key);
 	struct list_head *list_head = &hash_table_entry->list_head;
