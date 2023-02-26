@@ -116,4 +116,5 @@ void hash_table_v1_destroy(struct hash_table_v1 *hash_table)
 		}
 	}
 	free(hash_table);
+	pthread_mutex_destroy(&v1_mutex);
 }
