@@ -5,7 +5,22 @@ else
 	CFLAGS = -std=gnu17 -pthread -Wall -O0 -pipe -fno-plt -fPIC -I.
 	LDFLAGS = -lrt -pthread -Wl,-O1,--sort-common,--as-needed,-z,relro,-z,now
 endif
-
+TSAN = -fsanitize=thread -fsanitize=undefined -g3 -Og
+ASAN = -fsanitize=address -fsanitize=undefined -g3 -Og
+FIX_FOR_SEASNET_LINKER_ISSUES_COMMON_SEASNET_L = -Wl,--rpath=/usr/local/cs/lib64 -L/usr/local/cs/lib64
+# ##########################################################
+# Run `make SAN=tsan` to detect data races, `make SAN=asan` to detect memory leaks
+#
+# Thanks to Vincent Lin for writing the conditional section below!
+# His Piazza comment: https://piazza.com/class/lcjl27z4agp66l/post/315_f3
+ifeq ($(SAN),tsan)
+  SANITIZE = $(TSAN)
+else ifeq ($(SAN),asan)
+  SANITIZE = $(ASAN)
+endif
+# ##########################################################
+CFLAGS += $(SANITIZE)
+LDFLAGS += $(SANITIZE) $(FIX_FOR_SEASNET_LINKER_ISSUES_COMMON_SEASNET_L)
 
 OBJS = \
   hash-table-common.o \
