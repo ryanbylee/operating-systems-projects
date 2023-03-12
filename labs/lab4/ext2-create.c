@@ -74,6 +74,7 @@ typedef int32_t i32;
 #define	EXT2_N_BLOCKS    (EXT2_TIND_BLOCK + 1)
 
 #define EXT2_NAME_LEN 255
+#define EXT2_SUPER_MAGIC 0xEF53
 
 struct ext2_superblock {
 	u32 s_inodes_count;
@@ -196,27 +197,27 @@ void write_superblock(int fd) {
 
 	/* These are intentionally incorrectly set as 0, you should set them
 	   correctly and delete this comment */
-	superblock.s_inodes_count      = 0;
-	superblock.s_blocks_count      = 0;
+	superblock.s_inodes_count      = NUM_INODES;
+	superblock.s_blocks_count      = NUM_BLOCKS;
 	superblock.s_r_blocks_count    = 0;
-	superblock.s_free_blocks_count = 0;
-	superblock.s_free_inodes_count = 0;
-	superblock.s_first_data_block  = 0; /* First Data Block */
+	superblock.s_free_blocks_count = NUM_FREE_BLOCKS;
+	superblock.s_free_inodes_count = NUM_FREE_INODES;
+	superblock.s_first_data_block  = SUPERBLOCK_BLOCKNO; /* First Data Block */
 	superblock.s_log_block_size    = 0; /* 1024 */
 	superblock.s_log_frag_size     = 0; /* 1024 */
-	superblock.s_blocks_per_group  = 0;
-	superblock.s_frags_per_group   = 0;
-	superblock.s_inodes_per_group  = 0;
+	superblock.s_blocks_per_group  = BLOCK_SIZE * 8;
+	superblock.s_frags_per_group   = BLOCK_SIZE * 8;
+	superblock.s_inodes_per_group  = NUM_INODES;
 	superblock.s_mtime             = 0; /* Mount time */
-	superblock.s_wtime             = 0; /* Write time */
+	superblock.s_wtime             = current_time; /* Write time */
 	superblock.s_mnt_count         = 0; /* Number of times mounted so far */
-	superblock.s_max_mnt_count     = 0; /* Make this unlimited */
-	superblock.s_magic             = 0; /* ext2 Signature */
-	superblock.s_state             = 0; /* File system is clean */
-	superblock.s_errors            = 0; /* Ignore the error (continue on) */
+	superblock.s_max_mnt_count     = -1; /* Make this unlimited */
+	superblock.s_magic             = EXT2_SUPER_MAGIC; /* ext2 Signature */
+	superblock.s_state             = 1; /* File system is clean */
+	superblock.s_errors            = 1; /* Ignore the error (continue on) */
 	superblock.s_minor_rev_level   = 0; /* Leave this as 0 */
-	superblock.s_lastcheck         = 0; /* Last check time */
-	superblock.s_checkinterval     = 0; /* Force checks by making them every 1 second */
+	superblock.s_lastcheck         = current_time; /* Last check time */
+	superblock.s_checkinterval     = 1; /* Force checks by making them every 1 second */
 	superblock.s_creator_os        = 0; /* Linux */
 	superblock.s_rev_level         = 0; /* Leave this as 0 */
 	superblock.s_def_resuid        = 0; /* root */
@@ -259,11 +260,11 @@ void write_block_group_descriptor_table(int fd) {
 
 	/* These are intentionally incorrectly set as 0, you should set them
 	   correctly and delete this comment */
-	block_group_descriptor.bg_block_bitmap = 0;
-	block_group_descriptor.bg_inode_bitmap = 0;
-	block_group_descriptor.bg_inode_table = 0;
-	block_group_descriptor.bg_free_blocks_count = 0;
-	block_group_descriptor.bg_free_inodes_count = 0;
+	block_group_descriptor.bg_block_bitmap = BLOCK_BITMAP_BLOCKNO;
+	block_group_descriptor.bg_inode_bitmap = INODE_BITMAP_BLOCKNO;
+	block_group_descriptor.bg_inode_table = INODE_TABLE_BLOCKNO;
+	block_group_descriptor.bg_free_blocks_count = NUM_FREE_BLOCKS;
+	block_group_descriptor.bg_free_inodes_count = NUM_FREE_INODES;
 	block_group_descriptor.bg_used_dirs_count = 0;
 
 	ssize_t size = sizeof(block_group_descriptor);
@@ -271,13 +272,51 @@ void write_block_group_descriptor_table(int fd) {
 		errno_exit("write");
 	}
 }
+static void set_bit(u8 *bitmap, u32 number)
+{
+    u32 byte_num = (number - 1) / 8;
+    u32 bit_num = (number - 1) % 8;
+    bitmap[byte_num] |= (1 << bit_num);
+}
 
 void write_block_bitmap(int fd) {
 	/* This is all you */
+	//seek offset using the lseek function
+	off_t off = lseek(fd, BLOCK_OFFSET(BLOCK_BITMAP_BLOCKNO), SEEK_SET);
+	if (off == -1){
+		errno_exit("lseek");
+	}
+
+	u8 bitmap[BLOCK_SIZE] = {0};
+	for (u32 i = 1; i <= LAST_BLOCK; i++){
+		set_bit(bitmap, i);
+	}
+	//fill out the byte array fully
+	for (u32 i = NUM_BLOCKS; i <= NUM_BLOCKS * 8; i++){
+    	set_bit(bitmap, i);
+	}
+	//write into the file pointed to by fd
+	if (write(fd, bitmap, sizeof(bitmap)) != sizeof(bitmap)){
+		errno_exit("write");
+	}
 }
 
 void write_inode_bitmap(int fd) {
 	/* This is all you */
+	off_t off = lseek(fd, BLOCK_OFFSET(INODE_BITMAP_BLOCKNO), SEEK_SET);
+	if (off == -1){
+		errno_exit("lseek");
+	}
+
+	u8 bitmap[LAST_INO] = {0};
+	for (u32 i = 1; i <= LAST_INO; i++){
+		set_bit(bitmap, i);
+	}
+	//fill out the byte array fully
+	//write into the file pointed to by fd
+	if (write(fd, bitmap, sizeof(bitmap)) != sizeof(bitmap)){
+		errno_exit("write");
+	}
 }
 
 void write_inode(int fd, u32 index, struct ext2_inode *inode) {
@@ -320,10 +359,21 @@ void write_inode_table(int fd) {
 
 	/* You should add your 3 other inodes in this function and delete this
 	   comment */
+	//hello world
+	///hello symlink
+	//.. (itself) root
 }
 
 void write_root_dir_block(int fd) {
 	/* This is all you */
+	//directory entries
+	// . 
+	// ..
+	//hello world
+	//hello
+	//lost+found
+	//use dir_entry_write for every entry
+
 }
 
 void write_lost_and_found_dir_block(int fd) {
@@ -354,6 +404,8 @@ void write_lost_and_found_dir_block(int fd) {
 
 void write_hello_world_file_block(int fd) {
 	/* This is all you */
+	//make sure you're at the right offset, lseek
+	//use the write system to write the string "hello world\n"
 }
 
 int main(int argc, char *argv[]) {
