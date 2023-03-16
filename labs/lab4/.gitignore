@@ -3,3 +3,9 @@ ext2-create.o
 *.img
 *-lab4-submission.tar
 /mnt/
+
+# Test suite
+*.tar
+check_dump.py
+test_lab4_ext.py
+dump_block.py
