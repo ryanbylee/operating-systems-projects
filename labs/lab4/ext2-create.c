@@ -195,8 +195,6 @@ void write_superblock(int fd) {
 
 	struct ext2_superblock superblock = {0};
 
-	/* These are intentionally incorrectly set as 0, you should set them
-	   correctly and delete this comment */
 	superblock.s_inodes_count      = NUM_INODES;
 	superblock.s_blocks_count      = NUM_BLOCKS;
 	superblock.s_r_blocks_count    = 0;
@@ -223,8 +221,6 @@ void write_superblock(int fd) {
 	superblock.s_def_resuid        = 0; /* root */
 	superblock.s_def_resgid        = 0; /* root */
 
-	/* You can leave everything below this line the same, delete this
-	   comment when you're done the lab */
 	superblock.s_uuid[0] = 0x5A;
 	superblock.s_uuid[1] = 0x1E;
 	superblock.s_uuid[2] = 0xAB;
@@ -258,8 +254,6 @@ void write_block_group_descriptor_table(int fd) {
 
 	struct ext2_block_group_descriptor block_group_descriptor = {0};
 
-	/* These are intentionally incorrectly set as 0, you should set them
-	   correctly and delete this comment */
 	block_group_descriptor.bg_block_bitmap = BLOCK_BITMAP_BLOCKNO;
 	block_group_descriptor.bg_inode_bitmap = INODE_BITMAP_BLOCKNO;
 	block_group_descriptor.bg_inode_table = INODE_TABLE_BLOCKNO;
@@ -272,15 +266,14 @@ void write_block_group_descriptor_table(int fd) {
 		errno_exit("write");
 	}
 }
-static void set_bit(u8 *bitmap, u32 number)
+static void set_bit(u8 *bitmap, u32 num)
 {
-    u32 byte_num = (number - 1) / 8;
-    u32 bit_num = (number - 1) % 8;
-    bitmap[byte_num] |= (1 << bit_num);
+    u32 byte = (num - 1) / 8;
+    u32 bit = (num - 1) % 8;
+    bitmap[byte] |= (1 << bit);
 }
 
 void write_block_bitmap(int fd) {
-	/* This is all you */
 	//seek offset using the lseek function
 	off_t off = lseek(fd, BLOCK_OFFSET(BLOCK_BITMAP_BLOCKNO), SEEK_SET);
 	if (off == -1){
@@ -302,7 +295,7 @@ void write_block_bitmap(int fd) {
 }
 
 void write_inode_bitmap(int fd) {
-	/* This is all you */
+	//seek offset using the lseek function
 	off_t off = lseek(fd, BLOCK_OFFSET(INODE_BITMAP_BLOCKNO), SEEK_SET);
 	if (off == -1){
 		errno_exit("lseek");
@@ -360,12 +353,7 @@ void write_inode_table(int fd) {
 	lost_and_found_inode.i_block[0] = LOST_AND_FOUND_DIR_BLOCKNO;
 	write_inode(fd, LOST_AND_FOUND_INO, &lost_and_found_inode);
 
-	/* 
-	You should add your 3 other inodes in this function and delete this
-	   comment */
-
 	//hello world
-	
 	struct ext2_inode hello_world_inode = {0};
 	hello_world_inode.i_mode = EXT2_S_IFREG
 	                              | EXT2_S_IRUSR
@@ -404,7 +392,7 @@ void write_inode_table(int fd) {
 	hello_inode.i_blocks = 0; /* These are oddly 512 blocks */
 	write_inode(fd, HELLO_INO, &hello_inode);
 
-	//.. (itself) root
+	//root
 	struct ext2_inode root_inode = {0};
 	root_inode.i_mode = EXT2_S_IFDIR
 	                              | EXT2_S_IRUSR
@@ -428,7 +416,6 @@ void write_inode_table(int fd) {
 }
 
 void write_root_dir_block(int fd) {
-	/* This is all you */
 	//directory entries
 	// . 
 	// ..
@@ -508,8 +495,6 @@ void write_lost_and_found_dir_block(int fd) {
 }
 
 void write_hello_world_file_block(int fd) {
-	/* This is all you */
-	//make sure you're at the right offset, lseek
 	//use the write system to write the string "hello world\n"
 	off_t off = BLOCK_OFFSET(HELLO_WORLD_FILE_BLOCKNO);
 	off = lseek(fd, off, SEEK_SET);
